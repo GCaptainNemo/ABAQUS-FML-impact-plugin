@@ -37,7 +37,7 @@ RsgIcon(p='HFrame_18', fileName=r'rotation.png')
 RsgIcon(p='HFrame_18', fileName=r'Stack.png')
 RsgHorizontalFrame(name='HFrame_19', p='TabItem_1', layout='0', pl=0, pr=0, pt=0, pb=0)
 RsgComboBox(name='ComboBox_1', p='HFrame_19', text='Metal:', keyword='Metal_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None', layout='')
-RsgComboBox(name='ComboBox_2', p='HFrame_19', text='Polymer:', keyword='polymer_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None', layout='')
+RsgComboBox(name='ComboBox_2', p='HFrame_19', text='FRP:', keyword='polymer_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None', layout='')
 materials = mdb.models['Model-1'].materials.keys()
 for material in materials:
     RsgListItem(p='ComboBox_1', text=material)
