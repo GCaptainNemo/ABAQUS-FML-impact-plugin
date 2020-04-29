@@ -8,7 +8,7 @@ toolset = getAFXApp().getAFXMainWindow().getPluginToolset()
 toolset.registerGuiMenuButton(
     buttonText='FML impact model', 
     object=Activator(os.path.join(thisDir, 'impact_xiugai_DB.py')),
-    kernelInitString='import Lamin',
+    kernelInitString='import impact_kernel',
     messageId=AFXMode.ID_ACTIVATE,
     icon=None,
     applicableModules=ALL,
