@@ -6,7 +6,7 @@
 
 from rsg.rsgGui import *
 from abaqusConstants import INTEGER, FLOAT
-dialogBox = RsgDialog(title='Laminates Builder', kernelModule='Lamin', kernelFunction='Test', includeApplyBtn=False, includeSeparator=True, okBtnText='OK', applyBtnText='Apply', execDir=thisDir)
+dialogBox = RsgDialog(title='Laminates Builder', kernelModule='impact_kernel', kernelFunction='Test', includeApplyBtn=False, includeSeparator=True, okBtnText='OK', applyBtnText='Apply', execDir=thisDir)
 RsgTabBook(name='TabBook_1', p='DialogBox', layout='0')
 RsgTabItem(name='TabItem_4', p='TabBook_1', text='Geometry')
 RsgLabel(p='TabItem_4', text='Default Unit(mm)', useBoldFont=False)
@@ -31,25 +31,23 @@ RsgGroupBox(name='GroupBox_4', p='VFrame_5', text='Impact Head', layout='0')
 RsgTextField(p='GroupBox_4', fieldType='Float', ncols=12, labelText='Radius          ', keyword='Radius', default='6.5')
 RsgTextField(p='GroupBox_4', fieldType='Float', ncols=12, labelText='Speed(mm/s)', keyword='Speed', default='3200')
 RsgTextField(p='GroupBox_4', fieldType='Float', ncols=12, labelText='Mesh Size     ', keyword='Mesh_Size_Impact', default='1')
+RsgTextField(p='GroupBox_4', fieldType='Float', ncols=12, labelText='Total time(s): ', keyword='Total_Time', default='0.01')
 RsgTabItem(name='TabItem_1', p='TabBook_1', text='Assign')
 RsgHorizontalFrame(name='HFrame_18', p='TabItem_1', layout='0', pl=0, pr=0, pt=0, pb=0)
 RsgIcon(p='HFrame_18', fileName=r'rotation.png')
 RsgIcon(p='HFrame_18', fileName=r'Stack.png')
 RsgHorizontalFrame(name='HFrame_19', p='TabItem_1', layout='0', pl=0, pr=0, pt=0, pb=0)
-RsgComboBox(name='ComboBox_1', p='HFrame_19', text='Metal:', keyword='Metal_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None', layout='')
-RsgComboBox(name='ComboBox_2', p='HFrame_19', text='FRP:', keyword='polymer_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None', layout='')
+RsgComboBox(name='ComboBox_1', p='HFrame_19', text='Metal:', keyword='Metal_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None1', layout='')
+RsgComboBox(name='ComboBox_2', p='HFrame_19', text='FRP:', keyword='polymer_name', default='', comboType='STANDARD', repository='', rootText='', rootKeyword='None2', layout='')
 materials = mdb.models['Model-1'].materials.keys()
 for material in materials:
     RsgListItem(p='ComboBox_1', text=material)
-for material in materials:
     RsgListItem(p='ComboBox_2', text=material)
+
+
+
 RsgTable(p='TabItem_1', numRows=10, columnData=[('Metal', 'Bool', 100), ('FRP', 'Bool', 100), ('Thickness(mm)', 'Float', 120), ('Rotation Angle( FRP Only )', 'Float', 100)], showRowNumbers=True, showGrids=True, keyword='Stack', popupFlags='AFXTable.POPUP_COPY|AFXTable.POPUP_PASTE|AFXTable.POPUP_INSERT_ROW|AFXTable.POPUP_DELETE_ROW|AFXTable.POPUP_CLEAR_CONTENTS')
 RsgGroupBox(name='GroupBox_13', p='TabItem_1', text='Attention', layout='LAYOUT_FILL_X')
 RsgLabel(p='GroupBox_13', text='Metal or FRP can only be chosen one', useBoldFont=True)
 RsgLabel(p='GroupBox_13', text='There must be two layers at least', useBoldFont=True)
-RsgTabItem(name='TabItem_2', p='TabBook_1', text='Other')
-RsgTextField(p='TabItem_2', fieldType='Float', ncols=12, labelText='Friction Coefficient', keyword='Friction_Coef', default='0.3')
-RsgTextField(p='TabItem_2', fieldType='Float', ncols=12, labelText='Total time(s)', keyword='Total_Time', default='0.01')
-RsgTextField(p='TabItem_2', fieldType='Integer', ncols=12, labelText='Number of solution-dependent state variables', keyword='SDVn', default='15')
-RsgTextField(p='TabItem_2', fieldType='Integer', ncols=12, labelText='Variable number controlling element deletion', keyword='SDVd', default='15')
 dialogBox.show()
