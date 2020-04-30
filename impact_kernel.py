@@ -24,27 +24,30 @@ import connectorBehavior
 
 def Test(Long_Whole, Width_Whole, Mesh_Size_Whole, Long_Center, Width_Center,
          Mesh_Size_Center, Radius, Speed,
-         Mesh_Size_Impact, Total_Time, Metal_name, polymer_name, Stack):
+         Mesh_Size_Impact, Total_Time, Metal_name, polymer_name, GroupBox14, Stack):
     Speed = -Speed
     layers_num = len(Stack)
-
     thick_whole = 0
     for i in range(layers_num):
         thick_whole = thick_whole + Stack[i][2]
+    if GroupBox14 == '1/4 model':
+        num = 1
+    else:
+        num = 0
 
-    create_plate(Long_Whole, Width_Whole, Long_Center, Width_Center, thick_whole, Stack)
-    create_impact_head(Radius)
-    create_support()
+    create_plate(Long_Whole, Width_Whole, Long_Center, Width_Center, thick_whole, Stack, num)
+    create_impact_head(Radius, num)
+    create_support(num)
     set_property()
     set_plate_property(Stack, Metal_name, polymer_name)
     set_assemble(Radius, thick_whole)
     set_step(Total_Time, Speed)
     set_interaction()
-    set_load()
-    set_mesh(Mesh_Size_Whole, Mesh_Size_Center, Mesh_Size_Impact)
+    set_load(num)
+    set_mesh(Mesh_Size_Whole, Mesh_Size_Center, Mesh_Size_Impact, num)
 
 
-def create_plate(Long_Whole, Width_Whole, Long_Center, Width_Center, thick_whole, Stack):
+def create_plate(Long_Whole, Width_Whole, Long_Center, Width_Center, thick_whole, Stack, num):
     # Part()
     # Create Plate
     # Sktech
@@ -119,13 +122,20 @@ def create_plate(Long_Whole, Width_Whole, Long_Center, Width_Center, thick_whole
     tmp_num = float(Stack[0][2]) / 4.0
     p.PartitionCellByExtrudeEdge(line=e.findAt((0.0, 0.0, tmp_num)), cells=c, edges=pickedEdges,
                                  sense=REVERSE)  #######---
+    if num == 0:
+        p = mdb.models['Model-1'].parts['Plate']
+        f = p.faces
+        p.Mirror(mirrorPlane=f[6], keepOriginal=ON)
 
 
 
-def create_impact_head(Radius):
+
+def create_impact_head(Radius, num):
     # Create Impact Head
     s = mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=30.0)
     g, v, d1, c = s.geometry, s.vertices, s.dimensions, s.constraints
+
+
     s.setPrimaryObject(option=STANDALONE)
     s.ConstructionLine(point1=(0.0, -15.0), point2=(0.0, 15.0))
 
@@ -144,9 +154,13 @@ def create_impact_head(Radius):
     r = p.referencePoints
     refPoints = (r[2],)
     p.Set(referencePoints=refPoints, name='Impact Head')
+    if num == 0:
+        p = mdb.models['Model-1'].parts['Impact Head']
+        f = p.faces
+        p.Mirror(mirrorPlane=f[1], keepOriginal=ON)
 
 
-def create_support():
+def create_support(num):
 
     # Create Support Up
 
@@ -193,6 +207,18 @@ def create_support():
     r = p.referencePoints
     refPoints = (r[2],)
     p.Set(referencePoints=refPoints, name='Support Down')
+
+    if num == 0:
+
+        #  1/2 model
+
+        p = mdb.models['Model-1'].parts['Support Down']
+        f = p.faces
+        p.Mirror(mirrorPlane=f[1], keepOriginal=ON)
+
+        p = mdb.models['Model-1'].parts['Support Up']
+        f1 = p.faces
+        p.Mirror(mirrorPlane=f1[1], keepOriginal=ON)
 
 
 def set_assemble(Radius,thick_whole):
@@ -385,6 +411,8 @@ def  set_interaction():
     region1 = regionToolset.Region(referencePoints=refPoints1)
     mdb.models['Model-1'].RigidBody(name='Constraint-1', refPointRegion=region1,
                                     bodyRegion=region2)
+
+
     a = mdb.models['Model-1'].rootAssembly
     c1 = a.instances['Support Up'].cells
     cells1 = c1.getSequenceFromMask(mask=('[#1 ]',), )
@@ -406,133 +434,270 @@ def  set_interaction():
     mdb.models['Model-1'].RigidBody(name='Constraint-3', refPointRegion=region1,
                                     bodyRegion=region2)
 
-def set_load():
-    a = mdb.models['Model-1'].rootAssembly
-    f1 = a.instances['Support Down'].faces
-    faces1 = f1.getSequenceFromMask(mask=('[#40 ]',), )
-    f2 = a.instances['Support Up'].faces
-    faces2 = f2.getSequenceFromMask(mask=('[#20 ]',), )
-    region = regionToolset.Region(faces=faces1 + faces2)
-    mdb.models['Model-1'].EncastreBC(name='BC-1', createStepName='Initial',
-                                     region=region, localCsys=None)
-    a = mdb.models['Model-1'].rootAssembly
-    r1 = a.instances['Impact Head'].referencePoints
-    refPoints1 = (r1[2],)
-    region = regionToolset.Region(referencePoints=refPoints1)
-    mdb.models['Model-1'].XsymmBC(name='imp-x', createStepName='Initial',
-                                  region=region, localCsys=None)
-    a = mdb.models['Model-1'].rootAssembly
-    r1 = a.instances['Impact Head'].referencePoints
-    refPoints1 = (r1[2],)
-    region = regionToolset.Region(referencePoints=refPoints1)
-    mdb.models['Model-1'].YsymmBC(name='imp-y', createStepName='Initial',
-                                  region=region, localCsys=None)
-    a = mdb.models['Model-1'].rootAssembly
-    f1 = a.instances['Plate'].faces
-    faces1 = f1.getSequenceFromMask(mask=('[#180 ]',), )
-    region = regionToolset.Region(faces=faces1)
-    mdb.models['Model-1'].EncastreBC(name='plate', createStepName='Initial',
-                                     region=region, localCsys=None)
-    a = mdb.models['Model-1'].rootAssembly
-    f1 = a.instances['Plate'].faces
-    faces1 = f1.getSequenceFromMask(mask=('[#50 ]',), )
-    region = regionToolset.Region(faces=faces1)
-    mdb.models['Model-1'].XsymmBC(name='sy-x', createStepName='Initial',
-                                  region=region, localCsys=None)
-    a = mdb.models['Model-1'].rootAssembly
-    f1 = a.instances['Plate'].faces
-    faces1 = f1.getSequenceFromMask(mask=('[#208 ]',), )
-    region = regionToolset.Region(faces=faces1)
-    mdb.models['Model-1'].YsymmBC(name='sy-y', createStepName='Initial',
-                                  region=region, localCsys=None)
+def set_load(num):
+    if num == 1:
+        # 1/4 model
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Support Down'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#40 ]',), )
+        f2 = a.instances['Support Up'].faces
+        faces2 = f2.getSequenceFromMask(mask=('[#20 ]',), )
+        region = regionToolset.Region(faces=faces1 + faces2)
+        mdb.models['Model-1'].EncastreBC(name='BC-1', createStepName='Initial',
+                                         region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        r1 = a.instances['Impact Head'].referencePoints
+        refPoints1 = (r1[2],)
+        region = regionToolset.Region(referencePoints=refPoints1)
+        mdb.models['Model-1'].XsymmBC(name='imp-x', createStepName='Initial',
+                                      region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        r1 = a.instances['Impact Head'].referencePoints
+        refPoints1 = (r1[2],)
+        region = regionToolset.Region(referencePoints=refPoints1)
+        mdb.models['Model-1'].YsymmBC(name='imp-y', createStepName='Initial',
+                                      region=region, localCsys=None)
+
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Plate'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#180 ]',), )
+        region = regionToolset.Region(faces=faces1)
+        mdb.models['Model-1'].EncastreBC(name='plate', createStepName='Initial',
+                                         region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Plate'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#50 ]',), )
+        region = regionToolset.Region(faces=faces1)
+        mdb.models['Model-1'].XsymmBC(name='sy-x', createStepName='Initial',
+                                      region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Plate'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#208 ]',), )
+        region = regionToolset.Region(faces=faces1)
+        mdb.models['Model-1'].YsymmBC(name='sy-y', createStepName='Initial',
+                                      region=region, localCsys=None)
+    else:
+        # 1/2 model
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Support Up'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#40 ]',), )
+        f2 = a.instances['Support Down'].faces
+        faces2 = f2.getSequenceFromMask(mask=('[#80 ]',), )
+        region = regionToolset.Region(faces=faces1 + faces2)
+        mdb.models['Model-1'].EncastreBC(name='BC-1', createStepName='Initial',
+                                         region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        r1 = a.instances['Impact Head'].referencePoints
+        refPoints1 = (r1[2],)
+        region = regionToolset.Region(referencePoints=refPoints1)
+        mdb.models['Model-1'].XsymmBC(name='imp-x', createStepName='Initial',
+                                      region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        r1 = a.instances['Impact Head'].referencePoints
+        refPoints1 = (r1[2],)
+        region = regionToolset.Region(referencePoints=refPoints1)
+        mdb.models['Model-1'].YsymmBC(name='imp-y', createStepName='Initial',
+                                      region=region, localCsys=None)
+
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Plate'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#302 ]',), )
+        region = regionToolset.Region(faces=faces1)
+        mdb.models['Model-1'].EncastreBC(name='plate', createStepName='Initial',
+                                         region=region, localCsys=None)
+        a = mdb.models['Model-1'].rootAssembly
+        f1 = a.instances['Plate'].faces
+        faces1 = f1.getSequenceFromMask(mask=('[#444 ]',), )
+        region = regionToolset.Region(faces=faces1)
+        mdb.models['Model-1'].YsymmBC(name='sy-y', createStepName='Initial',
+                                      region=region, localCsys=None)
 
 
-def set_mesh(Mesh_Size_Whole, Mesh_Size_Center, Mesh_Size_Impact):
-    p = mdb.models['Model-1'].parts['Plate']
-    c = p.cells
-    pickedRegions = c.getSequenceFromMask(mask=('[#3 ]',), )
-    p.setMeshControls(regions=pickedRegions, technique=SWEEP)
-    p = mdb.models['Model-1'].parts['Plate']
-    c, e = p.cells, p.edges
-    p.setSweepPath(region=c[1], edge=e[6], sense=REVERSE)
-    elemType1 = mesh.ElemType(elemCode=SC8R, elemLibrary=EXPLICIT,
-                              secondOrderAccuracy=OFF, hourglassControl=DEFAULT, elemDeletion=ON)
-    elemType2 = mesh.ElemType(elemCode=SC6R, elemLibrary=EXPLICIT)
-    elemType3 = mesh.ElemType(elemCode=UNKNOWN_TET, elemLibrary=EXPLICIT)
-    p = mdb.models['Model-1'].parts['Plate']
-    c = p.cells
-    cells = c.getSequenceFromMask(mask=('[#3 ]',), )
-    pickedRegions = (cells,)
-    p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
-                                                       elemType3))
-    p = mdb.models['Model-1'].parts['Plate']
-    e = p.edges
-    pickedEdges = e.getSequenceFromMask(mask=('[#182835 ]',), )
-    p.seedEdgeBySize(edges=pickedEdges, size=Mesh_Size_Center, deviationFactor=0.1,
-                     constraint=FINER)
-    p = mdb.models['Model-1'].parts['Plate']
-    e = p.edges
-    pickedEdges = e.getSequenceFromMask(mask=('[#609042 ]',), )
-    p.seedEdgeByNumber(edges=pickedEdges, number=1, constraint=FINER)
-    p = mdb.models['Model-1'].parts['Plate']
-    p.seedPart(size=Mesh_Size_Whole, deviationFactor=0.1, minSizeFactor=0.1)
-    p = mdb.models['Model-1'].parts['Plate']
-    p.generateMesh()
+def set_mesh(Mesh_Size_Whole, Mesh_Size_Center, Mesh_Size_Impact, num):
+    if num == 1:
+        p = mdb.models['Model-1'].parts['Plate']
+        c = p.cells
+        pickedRegions = c.getSequenceFromMask(mask=('[#3 ]',), )
+        p.setMeshControls(regions=pickedRegions, technique=SWEEP)
+        p = mdb.models['Model-1'].parts['Plate']
+        c, e = p.cells, p.edges
+        p.setSweepPath(region=c[1], edge=e[6], sense=REVERSE)
+        elemType1 = mesh.ElemType(elemCode=SC8R, elemLibrary=EXPLICIT,
+                                  secondOrderAccuracy=OFF, hourglassControl=DEFAULT, elemDeletion=ON)
+        elemType2 = mesh.ElemType(elemCode=SC6R, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=UNKNOWN_TET, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Plate']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#3 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Plate']
+        e = p.edges
+        pickedEdges = e.getSequenceFromMask(mask=('[#182835 ]',), )
+        p.seedEdgeBySize(edges=pickedEdges, size=Mesh_Size_Center, deviationFactor=0.1,
+                         constraint=FINER)
+        p = mdb.models['Model-1'].parts['Plate']
+        e = p.edges
+        pickedEdges = e.getSequenceFromMask(mask=('[#609042 ]',), )
+        p.seedEdgeByNumber(edges=pickedEdges, number=1, constraint=FINER)
+        p = mdb.models['Model-1'].parts['Plate']
+        p.seedPart(size=Mesh_Size_Whole, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Plate']
+        p.generateMesh()
 
-    #:
-    #: Part: Plate
-    #:   Number of elements :  7407,   Analysis errors:  0 (0%),  Analysis warnings:  0 (0%)
-    p = mdb.models['Model-1'].parts['Impact Head']
-    session.viewports['Viewport: 1'].setValues(displayedObject=p)
-    elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
-                              kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
-                              hourglassControl=DEFAULT, distortionControl=DEFAULT)
-    elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
-    elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
-    p = mdb.models['Model-1'].parts['Impact Head']
-    c = p.cells
-    cells = c.getSequenceFromMask(mask=('[#1 ]',), )
-    pickedRegions = (cells,)
-    p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
-                                                       elemType3))
-    p = mdb.models['Model-1'].parts['Impact Head']
-    p.seedPart(size=Mesh_Size_Impact, deviationFactor=0.1, minSizeFactor=0.1)
-    p = mdb.models['Model-1'].parts['Impact Head']
-    p.generateMesh()
-    p = mdb.models['Model-1'].parts['Support Down']
-    elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
-                              kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
-                              hourglassControl=DEFAULT, distortionControl=DEFAULT)
-    elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
-    elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
-    p = mdb.models['Model-1'].parts['Support Down']
-    c = p.cells
-    cells = c.getSequenceFromMask(mask=('[#1 ]',), )
-    pickedRegions = (cells,)
-    p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
-                                                       elemType3))
-    p = mdb.models['Model-1'].parts['Support Down']
-    p.seedPart(size=3.0, deviationFactor=0.1, minSizeFactor=0.1)
-    p = mdb.models['Model-1'].parts['Support Down']
-    p.generateMesh()
+        #:
+        #: Part: Plate
+        #:   Number of elements :  7407,   Analysis errors:  0 (0%),  Analysis warnings:  0 (0%)
+        p = mdb.models['Model-1'].parts['Impact Head']
+        session.viewports['Viewport: 1'].setValues(displayedObject=p)
+        elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
+                                  kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
+                                  hourglassControl=DEFAULT, distortionControl=DEFAULT)
+        elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Impact Head']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Impact Head']
+        p.seedPart(size=Mesh_Size_Impact, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Impact Head']
+        p.generateMesh()
+        p = mdb.models['Model-1'].parts['Support Down']
+        elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
+                                  kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
+                                  hourglassControl=DEFAULT, distortionControl=DEFAULT)
+        elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Support Down']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Support Down']
+        p.seedPart(size=3.0, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Support Down']
+        p.generateMesh()
 
-    p = mdb.models['Model-1'].parts['Support Up']
-    p.seedPart(size=3.0, deviationFactor=0.1, minSizeFactor=0.1)
-    p = mdb.models['Model-1'].parts['Support Up']
-    p.generateMesh()
-    elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
-                              kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
-                              hourglassControl=DEFAULT, distortionControl=DEFAULT)
-    elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
-    elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
-    p = mdb.models['Model-1'].parts['Support Up']
-    c = p.cells
-    cells = c.getSequenceFromMask(mask=('[#1 ]',), )
-    pickedRegions = (cells,)
-    p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
-                                                       elemType3))
-    p = mdb.models['Model-1'].parts['Plate']
-    session.viewports['Viewport: 1'].setValues(displayedObject=p)
-    a1 = mdb.models['Model-1'].rootAssembly
-    a1.regenerate()
-    a = mdb.models['Model-1'].rootAssembly
+        p = mdb.models['Model-1'].parts['Support Up']
+        p.seedPart(size=3.0, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Support Up']
+        p.generateMesh()
+        elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
+                                  kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
+                                  hourglassControl=DEFAULT, distortionControl=DEFAULT)
+        elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Support Up']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Plate']
+        session.viewports['Viewport: 1'].setValues(displayedObject=p)
+        a1 = mdb.models['Model-1'].rootAssembly
+        a1.regenerate()
+        a = mdb.models['Model-1'].rootAssembly
+    else:
+        p = mdb.models['Model-1'].parts['Plate']
+        c = p.cells
+        pickedRegions = c.getSequenceFromMask(mask=('[#3 ]',), )
+        p.setMeshControls(regions=pickedRegions, technique=SWEEP)
+        p = mdb.models['Model-1'].parts['Plate']
+        c, e = p.cells, p.edges
+        p.setSweepPath(region=c[0], edge=e[31], sense=FORWARD)
+        p = mdb.models['Model-1'].parts['Plate']
+        c1, e1 = p.cells, p.edges
+        p.setSweepPath(region=c1[1], edge=e1[3], sense=REVERSE)
+        elemType1 = mesh.ElemType(elemCode=SC8R, elemLibrary=EXPLICIT,
+                                  secondOrderAccuracy=OFF, hourglassControl=DEFAULT, elemDeletion=ON)
+        elemType2 = mesh.ElemType(elemCode=SC6R, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=UNKNOWN_TET, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Plate']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#3 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Plate']
+        e = p.edges
+        pickedEdges = e.getSequenceFromMask(mask=('[#3c1bc05 ]',), )
+        p.seedEdgeBySize(edges=pickedEdges, size=Mesh_Size_Center, deviationFactor=0.1,
+                         constraint=FINER)
+        p = mdb.models['Model-1'].parts['Plate']
+        e = p.edges
+        pickedEdges = e.getSequenceFromMask(mask=('[#c00200a2 ]',), )
+        p.seedEdgeByNumber(edges=pickedEdges, number=1, constraint=FINER)
+        p = mdb.models['Model-1'].parts['Plate']
+        p.seedPart(size=Mesh_Size_Whole, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Plate']
+        p.generateMesh()
+        p = mdb.models['Model-1'].parts['Impact Head']
+        elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
+                                  kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
+                                  hourglassControl=DEFAULT, distortionControl=DEFAULT)
+        elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Impact Head']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Impact Head']
+        p.seedPart(size=1.0, deviationFactor=0.1, minSizeFactor=0.1)
+        a = mdb.models['Model-1'].rootAssembly
+        a.regenerate()
+
+        # support down
+        p = mdb.models['Model-1'].parts['Support Down']
+        elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
+                                  kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
+                                  hourglassControl=DEFAULT, distortionControl=DEFAULT)
+        elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Support Down']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Support Down']
+        p.seedPart(size=3, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Support Down']
+        p.generateMesh()
+
+        # support up
+        p = mdb.models['Model-1'].parts['Support Up']
+        p.seedPart(size=3.0, deviationFactor=0.1, minSizeFactor=0.1)
+        elemType1 = mesh.ElemType(elemCode=C3D8R, elemLibrary=EXPLICIT,
+                                  kinematicSplit=AVERAGE_STRAIN, secondOrderAccuracy=OFF,
+                                  hourglassControl=DEFAULT, distortionControl=DEFAULT)
+        elemType2 = mesh.ElemType(elemCode=C3D6, elemLibrary=EXPLICIT)
+        elemType3 = mesh.ElemType(elemCode=C3D4, elemLibrary=EXPLICIT)
+        p = mdb.models['Model-1'].parts['Support Up']
+        c = p.cells
+        cells = c.getSequenceFromMask(mask=('[#1 ]',), )
+        pickedRegions = (cells,)
+        p.setElementType(regions=pickedRegions, elemTypes=(elemType1, elemType2,
+                                                           elemType3))
+        p = mdb.models['Model-1'].parts['Support Up']
+        p.generateMesh()
+
+        # impact head
+
+        p = mdb.models['Model-1'].parts['Impact Head']
+        c = p.cells
+        pickedRegions = c.getSequenceFromMask(mask=('[#1 ]',), )
+        p.setMeshControls(regions=pickedRegions, elemShape=HEX_DOMINATED,
+                          technique=SWEEP, algorithm=ADVANCING_FRONT)
+        p = mdb.models['Model-1'].parts['Impact Head']
+        p.seedPart(size=Mesh_Size_Impact, deviationFactor=0.1, minSizeFactor=0.1)
+        p = mdb.models['Model-1'].parts['Impact Head']
+        p.generateMesh()
+
