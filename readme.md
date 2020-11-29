@@ -1,4 +1,4 @@
-An abaqus plugin, which build up model for FML impact model.
+# An abaqus plugin to build FML impact model
 First written by Zhang Ruihan, and I made a little improvement.
 
 
